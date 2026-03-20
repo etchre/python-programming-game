@@ -1,10 +1,12 @@
-# `create-preact`
+# Micromouse (programming web game)
 
-<h2 align="center">
-  <img height="256" width="256" src="./src/assets/preact.svg">
-</h2>
-
-<h3 align="center">Get started using Preact and Vite!</h3>
+## Dependencies
+- Preact
+- Mantine
+- CodeMirror (lang-python & theme-one-dark)
+- Pyodide (via CDN)
+- Phaser 3
+- Zustand
 
 ## Getting Started
 
