@@ -1,14 +1,16 @@
 import { render } from 'preact';
 import { MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
+import '@mantine/carousel/styles.css'
 import './style.css';
 
-import { Game, Levels, Menu } from './scenes';
+import { Game, Stages, Menu, LevelSelect } from './scenes';
 import { useSceneStore } from './stores/sceneStore';
 
 const scenes = {
   'menu': Menu,
-  'levels': Levels,
+  'stages': Stages,
+  'levelselect': LevelSelect,
   'game': Game
 }
 
@@ -17,7 +19,7 @@ export function App() {
   const SceneComponent = scenes[currentScene]
 
 	return (
-		<MantineProvider>
+		<MantineProvider defaultColorScheme='dark'>
 			<SceneComponent />
 		</MantineProvider>
 	);

@@ -2,7 +2,7 @@
 
 ## Dependencies
 - Preact
-- Mantine
+- Mantine (core, hooks, carousel)
 - CodeMirror (lang-python & theme-one-dark)
 - Pyodide (via CDN)
 - Phaser 3

@@ -2,4 +2,5 @@
 // for tidying up the import on index.tsx (not super necessary though)
 export { Menu } from './Menu';
 export { Game } from './Game';
-export { Levels } from './Levels';
+export { Stages } from './Stages';
+export { LevelSelect } from './LevelSelect';
