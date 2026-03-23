@@ -10,6 +10,7 @@ interface InfoTabProps {
 interface InfoPanelProps {
 	description: string;
 	tests: Test[];
+	consoleOutput: string[];
 }
 
 function InfoHeader() {
@@ -32,7 +33,7 @@ function InfoTab({ value, children }: InfoTabProps) {
 	);
 }
 
-export function InfoPanel({ description, tests }: InfoPanelProps) {
+export function InfoPanel({ description, tests, consoleOutput }: InfoPanelProps) {
 	return (
 		<Tabs defaultValue="description" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 			<InfoHeader />
@@ -41,9 +42,14 @@ export function InfoPanel({ description, tests }: InfoPanelProps) {
 				<Text>{description}</Text>
 			</InfoTab>
 
-			<InfoTab value="console">
-				<Text>Console output will appear here</Text>
-      </InfoTab>
+			<Tabs.Panel value="console" style={{ flex: 1, overflow: 'auto' }}>
+				<Code block style={{ whiteSpace: 'pre-wrap', minHeight: '100%', borderRadius: 0 }}>
+					{consoleOutput.length > 0
+						? consoleOutput.join('\n')
+						: <Text c="dimmed" size="sm">Run your code to see output here.</Text>
+					}
+				</Code>
+			</Tabs.Panel>
 
       <InfoTab value="testcases">
 				<Stack gap="xs">

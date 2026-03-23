@@ -17,6 +17,7 @@
 		"embla-carousel-react": "^8.6.0",
 		"phaser": "^3.90.0",
 		"preact": "^10.26.9",
+		"pyodide": "^0.29.3",
 		"react-jss": "^10.10.0",
 		"zustand": "^5.0.12"
 	},

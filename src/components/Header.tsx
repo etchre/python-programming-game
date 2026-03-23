@@ -3,10 +3,10 @@ import { ActionIcon, Button, Group, Title } from '@mantine/core';
 interface HeaderProps {
 	title: string;
 	onBack: () => void;
-	showRun?: boolean;
+	onRun?: () => void;
 }
 
-export function Header({ title, onBack, showRun = false }: HeaderProps) {
+export function Header({ title, onBack, onRun }: HeaderProps) {
 	return (
 		<Group
 			h={50}
@@ -18,7 +18,7 @@ export function Header({ title, onBack, showRun = false }: HeaderProps) {
 				<ActionIcon variant="subtle" onClick={onBack}>&lt;</ActionIcon>
 				<Title order={4}>{title}</Title>
 			</Group>
-			{showRun && <Button onClick={() => {}}>Run</Button>}
+			{onRun && <Button onClick={onRun}>Run</Button>}
 		</Group>
 	);
 }

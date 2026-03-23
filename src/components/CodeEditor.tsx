@@ -3,14 +3,16 @@ import { EditorView, basicSetup } from 'codemirror';
 import { EditorState } from '@codemirror/state';
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
+import { MutableRef } from 'preact/hooks';
 
 interface CodeEditorProps {
 	initialCode?: string;
+	editorViewRef?: MutableRef<EditorView | null>;
+	onCodeChange?: (code: string) => void;
 }
 
-export function CodeEditor({ initialCode = '' }: CodeEditorProps) {
+export function CodeEditor({ initialCode = '', editorViewRef, onCodeChange }: CodeEditorProps) {
 	const editorRef = useRef<HTMLDivElement>(null);
-	const viewRef = useRef<EditorView | null>(null);
 
 	useEffect(() => {
 		if (!editorRef.current) return;
@@ -25,6 +27,11 @@ export function CodeEditor({ initialCode = '' }: CodeEditorProps) {
 					'&': { height: '100%' },
 					'.cm-scroller': { overflow: 'auto' },
 				}),
+				EditorView.updateListener.of((update) => {
+					if (update.docChanged) {
+						onCodeChange?.(update.state.doc.toString());
+					}
+				}),
 			],
 		});
 
@@ -33,9 +40,12 @@ export function CodeEditor({ initialCode = '' }: CodeEditorProps) {
 			parent: editorRef.current,
 		});
 
-		viewRef.current = view;
+		if (editorViewRef) editorViewRef.current = view;
 
-		return () => view.destroy();
+		return () => {
+			view.destroy();
+			if (editorViewRef) editorViewRef.current = null;
+		};
 	}, []);
 
 	return <div ref={editorRef} style={{ height: '100%' }} />;
