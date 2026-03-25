@@ -11,6 +11,8 @@ interface InfoPanelProps {
 	description: string;
 	tests: Test[];
 	consoleOutput: string[];
+	activeTab: string;
+	onTabChange: (tab: string) => void;
 }
 
 function InfoHeader() {
@@ -33,9 +35,9 @@ function InfoTab({ value, children }: InfoTabProps) {
 	);
 }
 
-export function InfoPanel({ description, tests, consoleOutput }: InfoPanelProps) {
+export function InfoPanel({ description, tests, consoleOutput, activeTab, onTabChange }: InfoPanelProps) {
 	return (
-		<Tabs defaultValue="description" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+		<Tabs value={activeTab} onChange={(v) => onTabChange(v ?? 'description')} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 			<InfoHeader />
 
 			<InfoTab value="description">

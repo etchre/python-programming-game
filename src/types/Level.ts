@@ -1,12 +1,13 @@
-import Phaser from 'phaser';
 import { Test } from './Test';
+import { BaseScene } from '../phaser/BaseScene';
 
 export interface Level {
   id: number;
   name: string;
   description: string;
-  tests: Test[];
-  tasks: any[]; // TODO: replace with Task type when defined
+  tests?: Test[];
+  tasks?: any[]; // TODO: replace with Task type when defined
   starterCode: string;
-  phaserScene: typeof Phaser.Scene;
+  phaserScene?: typeof BaseScene;
+  needsCodeUpdate?: boolean;
 }

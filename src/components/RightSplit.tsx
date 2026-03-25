@@ -8,11 +8,11 @@ interface RightSplitProps {
 
 export function RightSplit({ top, bottom }: RightSplitProps) {
 	return (
-		<Stack w="50%" gap={0}>
-			<Box h="50%" style={{ borderBottom: '1px solid var(--mantine-color-dark-4)' }}>
+		<Stack w="50%" gap={0} h="100%">
+			<Box style={{ flex: 1, minHeight: 0, borderBottom: '1px solid var(--mantine-color-dark-4)' }}>
 				{top}
 			</Box>
-			<Box h="50%" style={{ overflow: 'auto' }}>
+			<Box style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
 				{bottom}
 			</Box>
 		</Stack>

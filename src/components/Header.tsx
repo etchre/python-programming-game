@@ -4,9 +4,10 @@ interface HeaderProps {
 	title: string;
 	onBack: () => void;
 	onRun?: () => void;
+	loading?: boolean;
 }
 
-export function Header({ title, onBack, onRun }: HeaderProps) {
+export function Header({ title, onBack, onRun, loading = false }: HeaderProps) {
 	return (
 		<Group
 			h={50}
@@ -18,7 +19,11 @@ export function Header({ title, onBack, onRun }: HeaderProps) {
 				<ActionIcon variant="subtle" onClick={onBack}>&lt;</ActionIcon>
 				<Title order={4}>{title}</Title>
 			</Group>
-			{onRun && <Button onClick={onRun}>Run</Button>}
+			{onRun && (
+				<Button onClick={onRun} disabled={loading} loading={loading}>
+					Run
+				</Button>
+			)}
 		</Group>
 	);
 }
