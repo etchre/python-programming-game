@@ -6,6 +6,7 @@ import { BaseScene } from '../phaser/BaseScene';
 import { useSceneStore } from '../stores/sceneStore';
 import { stages } from '../stages/stages';
 import { runPythonTraced } from '../api/pyodide';
+import type { Step } from '../types';
 
 import { Header } from '../components/Header';
 import { LeftSplit } from '../components/LeftSplit';
@@ -33,9 +34,18 @@ export function Game() {
 	const [isPlaying, setIsPlaying] = useState(false);
 	const [activeTab, setActiveTab] = useState('description');
 	const [speed, setSpeed] = useState('200');
+	const [currentStep, setCurrentStep] = useState(0);
+	const [completedSteps, setCompletedSteps] = useState<boolean[]>([]);
 
 	const stage = stages.find((s) => s.id === currentStage);
 	const level = stage?.levels.find((l) => l.id === currentLevel);
+
+	// derive step-aware values
+	const steps = level?.steps;
+	const activeStep: Step | undefined = steps?.[currentStep];
+	const stepStarterCode = activeStep?.starterCode ?? level?.starterCode ?? '';
+	const stepDescription = activeStep?.description ?? level?.description ?? '';
+	const stepTests = activeStep?.tests ?? level?.tests ?? [];
 
 	// callback whenever the run button is pressed
 	const handleRun = async () => {
@@ -97,18 +107,66 @@ export function Game() {
 				setConsoleMessages(['-- aborted early --']);
 			} else {
 				setConsoleOutput(stdout);
-				setConsoleMessages(['-- fully completed --']);
+				// check step/level completion
+				const tests = stepTests;
+				const passed = tests.length === 0 || tests.every(t => stdout.join('\n').trim() === t.expected.trim());
+				if (passed && steps) {
+					setCompletedSteps(prev => {
+						const next = [...prev];
+						next[currentStep] = true;
+						return next;
+					});
+					if (currentStep < steps.length - 1) {
+						setConsoleMessages(['-- step completed! --']);
+					} else {
+						setConsoleMessages(['-- level completed! --']);
+					}
+				} else if (passed) {
+					setConsoleMessages(['-- fully completed --']);
+				} else {
+					setConsoleMessages(['-- tests did not pass --']);
+				}
 			}
 			setIsPlaying(false);
 			abortRef.current = null;
 		} else {
 			setConsoleOutput(stdout);
-			setConsoleMessages(['-- fully completed --']);
+			const tests = stepTests;
+			const passed = tests.length === 0 || tests.every(t => stdout.join('\n').trim() === t.expected.trim());
+			if (passed && steps) {
+				setCompletedSteps(prev => {
+					const next = [...prev];
+					next[currentStep] = true;
+					return next;
+				});
+				if (currentStep < steps.length - 1) {
+					setConsoleMessages(['-- step completed! --']);
+				} else {
+					setConsoleMessages(['-- level completed! --']);
+				}
+			} else if (passed) {
+				setConsoleMessages(['-- fully completed --']);
+			} else {
+				setConsoleMessages(['-- tests did not pass --']);
+			}
 		}
 	};
 
 	const handleStop = () => {
 		abortRef.current?.abort();
+	};
+
+	const handleNextStep = () => {
+		if (steps && currentStep < steps.length - 1) {
+			goToStep(currentStep + 1);
+		}
+	};
+
+	const goToStep = (step: number) => {
+		setCurrentStep(step);
+		setConsoleOutput([]);
+		setConsoleMessages([]);
+		setActiveTab('description');
 	};
 
 	// give the latest code to the game canvas on every change
@@ -128,15 +186,21 @@ export function Game() {
 				onBack={() => setScene('levelselect')}
 				onRun={handleRun}
 				onStop={handleStop}
+				onNextStep={steps && completedSteps[currentStep] && currentStep < steps.length - 1 ? handleNextStep : undefined}
+				onStepClick={steps ? goToStep : undefined}
 				loading={isRunning}
 				isPlaying={isPlaying}
 				speed={speed}
 				onSpeedChange={(v) => { speedRef.current = v; setSpeed(v); }}
+				totalSteps={steps?.length}
+				currentStep={currentStep}
+				completedSteps={completedSteps}
 			/>
 			<Flex style={{ flex: 1, minHeight: 0 }}>
 				<LeftSplit>
 					<CodeEditor
-						initialCode={level?.starterCode}
+						key={`${currentLevel}-${currentStep}`}
+						initialCode={stepStarterCode}
 						editorViewRef={editorViewRef}
 						onCodeChange={handleCodeChange}
 					/>
@@ -145,8 +209,8 @@ export function Game() {
 					top={level ? <GameCanvas level={level} gameRef={gameRef} /> : null}
           bottom={
             <InfoPanel
-              description={level?.description ?? 'error... no description found!'}
-              tests={level?.tests ?? []}
+              description={stepDescription}
+              tests={stepTests}
               consoleOutput={consoleOutput}
               consoleMessages={consoleMessages}
               activeTab={activeTab}

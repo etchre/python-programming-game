@@ -6,15 +6,23 @@ export interface PythonModule {
   code: string;
 }
 
+export interface Step {
+  description: string;
+  starterCode: string;
+  tests?: Test[];
+  tasks?: any[];
+}
+
 export interface Level {
   id: number;
   name: string;
   description: string;
   tests?: Test[];
-  tasks?: any[]; // TODO: replace with Task type when defined
+  tasks?: any[];
   starterCode: string;
   phaserScene?: typeof BaseScene;
   needsCodeUpdate?: boolean;
   pythonModules?: PythonModule[];
   levelData?: Record<string, any>;
+  steps?: Step[];
 }

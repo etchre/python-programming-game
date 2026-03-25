@@ -1,5 +1,5 @@
-import js  # type: ignore — provided by Pyodide runtime
-_level_data: dict = _level_data  # type: ignore  # noqa: F821 — injected by worker
+import js  # type: ignore
+_level_data: dict = _level_data  # type: ignore  # noqa: F821
 
 _colors = list(_level_data.get('colors', {}).keys())
 

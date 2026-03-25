@@ -1,48 +1,11 @@
 // auto-loader — do not modify this file
 // customize level metadata in data.ts instead
-import type { Level, PythonModule } from '../../../types';
-import type { BaseScene } from '../../../phaser/BaseScene';
-import type { Test } from '../../../types/Test';
 import * as data from './data';
+import { createLevel } from '../../createLevel';
 
-// these will automatically grab the starter code, tests & tasks,
-// the respective phaser scene, and any python modules for this level
-// starter code -> any .py file (excluding .module.py)
-// test & tasks -> any .goals.ts file
-// phaser scene -> any .scene.ts file
-// python modules -> any .module.py file
-const starterModules = import.meta.glob('./*.py', { eager: true, query: '?raw', import: 'default' });
-const sceneModules = import.meta.glob('./*.scene.ts', { eager: true, import: 'default' });
-const goalsModules = import.meta.glob('./*.goals.ts', { eager: true });
-const pythonModuleFiles = import.meta.glob('./*.module.py', { eager: true, query: '?raw', import: 'default' });
-
-const starterCode = Object.entries(starterModules)
-  .filter(([path]) => !path.endsWith('.module.py'))
-  .map(([, code]) => code)[0] as string;
-const phaserScene = Object.values(sceneModules)[0] as typeof BaseScene | undefined;
-const goals = Object.values(goalsModules)[0] as { tests?: Test[]; tasks?: any[] } | undefined;
-
-// convert *.module.py files to PythonModule array
-// e.g. ./mouse.module.py -> { name: 'mouse', code: '...' }
-const pythonModules: PythonModule[] = Object.entries(pythonModuleFiles).map(([path, code]) => {
-  const filename = path.split('/').pop()!;
-  const name = filename.replace('.module.py', '');
-  return { name, code: code as string };
-});
-
-// the id of the level is infered by the folder name
-// 1hello -> 1, therefore the id for this level is 1
-const parts = new URL(import.meta.url).pathname.split('/');
-const folderName = parts[parts.length - 2] ?? '';
-const id = parseInt(folderName, 10);
-
-export const level: Level = {
-  id,
-  name: data.name,
-  description: data.description,
-  ...goals,
-  starterCode,
-  ...(phaserScene && { phaserScene, needsCodeUpdate: true }),
-  ...(pythonModules.length > 0 && { pythonModules }),
-  ...('levelData' in data && { levelData: (data as any).levelData }),
-};
+export const level = createLevel(data, {
+  pyFiles: import.meta.glob('./*.py', { eager: true, query: '?raw', import: 'default' }),
+  sceneFiles: import.meta.glob('./*.scene.ts', { eager: true, import: 'default' }),
+  goalsFiles: import.meta.glob('./*.goals.ts', { eager: true }),
+  moduleFiles: import.meta.glob('./*.module.py', { eager: true, query: '?raw', import: 'default' }),
+}, import.meta.url);
