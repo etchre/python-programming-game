@@ -5,7 +5,7 @@ const pending = new Map<number, { resolve: (value: any) => void; reject: (reason
 let initPromise: Promise<void> | null = null;
 
 worker.onmessage = (e: MessageEvent) => {
-  const { id, type, result, error, stdout } = e.data;
+  const { id, type, result, error, stdout, lineTrace, stdoutCounts } = e.data;
   const handler = pending.get(id);
   if (!handler) return;
   pending.delete(id);
@@ -13,7 +13,7 @@ worker.onmessage = (e: MessageEvent) => {
   if (type === 'ready') {
     handler.resolve(undefined);
   } else if (type === 'result') {
-    handler.resolve({ result, stdout });
+    handler.resolve({ result, stdout, lineTrace, stdoutCounts });
   } else if (type === 'error') {
     handler.reject({ error, stdout });
   }
@@ -37,4 +37,9 @@ export async function initPyodide(): Promise<void> {
 export async function runPython(code: string): Promise<{ result: string | null; stdout: string[] }> {
   await initPyodide();
   return send('run', { code });
+}
+
+export async function runPythonTraced(code: string): Promise<{ result: string | null; stdout: string[]; lineTrace: number[]; stdoutCounts: number[] }> {
+  await initPyodide();
+  return send('run', { code, trace: true });
 }

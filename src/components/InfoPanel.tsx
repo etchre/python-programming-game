@@ -1,5 +1,6 @@
 import { Tabs, Text, Box, Stack, Code } from '@mantine/core';
 import { ComponentChildren } from 'preact';
+import { useRef, useEffect } from 'preact/hooks';
 import { Test } from '../types';
 
 interface InfoTabProps {
@@ -11,6 +12,7 @@ interface InfoPanelProps {
 	description: string;
 	tests: Test[];
 	consoleOutput: string[];
+	consoleMessages: string[];
 	activeTab: string;
 	onTabChange: (tab: string) => void;
 }
@@ -35,7 +37,37 @@ function InfoTab({ value, children }: InfoTabProps) {
 	);
 }
 
-export function InfoPanel({ description, tests, consoleOutput, activeTab, onTabChange }: InfoPanelProps) {
+function ConsolePanel({ consoleOutput, consoleMessages }: { consoleOutput: string[]; consoleMessages: string[] }) {
+	const endRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		endRef.current?.scrollIntoView({ behavior: 'instant' });
+	}, [consoleOutput, consoleMessages]);
+
+	return (
+		<Tabs.Panel value="console" style={{ flex: 1, overflow: 'auto', backgroundColor: 'var(--mantine-color-dark-6)' }}>
+			<Code block style={{ whiteSpace: 'pre-wrap', borderRadius: 0, backgroundColor: 'transparent' }}>
+				{consoleOutput.length > 0
+					? consoleOutput.join('\n')
+					: <Text c="dimmed" size="sm">Run your code to see output here.</Text>
+				}
+			</Code>
+			{consoleMessages.length > 0 && (
+				<Box py="xs" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+					{consoleMessages.map((msg, i) => (
+						<Text key={i} c="dimmed" size="xs" px="sm" py={2}
+							style={{ borderRadius: 999, border: '1px solid var(--mantine-color-dark-4)' }}>
+							{msg}
+						</Text>
+					))}
+				</Box>
+			)}
+			<div ref={endRef} />
+		</Tabs.Panel>
+	);
+}
+
+export function InfoPanel({ description, tests, consoleOutput, consoleMessages, activeTab, onTabChange }: InfoPanelProps) {
 	return (
 		<Tabs value={activeTab} onChange={(v) => onTabChange(v ?? 'description')} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 			<InfoHeader />
@@ -44,14 +76,7 @@ export function InfoPanel({ description, tests, consoleOutput, activeTab, onTabC
 				<Text>{description}</Text>
 			</InfoTab>
 
-			<Tabs.Panel value="console" style={{ flex: 1, overflow: 'auto' }}>
-				<Code block style={{ whiteSpace: 'pre-wrap', minHeight: '100%', borderRadius: 0 }}>
-					{consoleOutput.length > 0
-						? consoleOutput.join('\n')
-						: <Text c="dimmed" size="sm">Run your code to see output here.</Text>
-					}
-				</Code>
-			</Tabs.Panel>
+			<ConsolePanel consoleOutput={consoleOutput} consoleMessages={consoleMessages} />
 
       <InfoTab value="testcases">
 				<Stack gap="xs">
