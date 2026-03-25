@@ -15,4 +15,16 @@ export class BaseScene extends Phaser.Scene {
   // this is only used when the level enables this feature
   // via 'needsCodeUpdate', it needs to be set to true
   updateCode(_code: string) {}
+
+  // called before playback begins, with the level's data
+  // override to reset visual state
+  onPlaybackStart(_levelData?: Record<string, any>) {}
+
+  // called for each event during playback
+  // override to handle game-specific actions
+  onEvent(_action: string, _args: any[]) {}
+
+  // called after playback completes or is aborted
+  // override for cleanup
+  onPlaybackEnd() {}
 }

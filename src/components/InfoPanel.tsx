@@ -17,12 +17,12 @@ interface InfoPanelProps {
 	onTabChange: (tab: string) => void;
 }
 
-function InfoHeader() {
+function InfoHeader({ hasTests }: { hasTests: boolean }) {
 	return (
 		<Tabs.List>
 			<Tabs.Tab value="description">Description</Tabs.Tab>
       <Tabs.Tab value="console">Console</Tabs.Tab>
-			<Tabs.Tab value="testcases">Test cases</Tabs.Tab>
+			{hasTests && <Tabs.Tab value="testcases">Test cases</Tabs.Tab>}
 		</Tabs.List>
 	);
 }
@@ -70,7 +70,7 @@ function ConsolePanel({ consoleOutput, consoleMessages }: { consoleOutput: strin
 export function InfoPanel({ description, tests, consoleOutput, consoleMessages, activeTab, onTabChange }: InfoPanelProps) {
 	return (
 		<Tabs value={activeTab} onChange={(v) => onTabChange(v ?? 'description')} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-			<InfoHeader />
+			<InfoHeader hasTests={tests.length > 0} />
 
 			<InfoTab value="description">
 				<Text>{description}</Text>
@@ -78,17 +78,19 @@ export function InfoPanel({ description, tests, consoleOutput, consoleMessages, 
 
 			<ConsolePanel consoleOutput={consoleOutput} consoleMessages={consoleMessages} />
 
-      <InfoTab value="testcases">
-				<Stack gap="xs">
-					{tests.map((test, i) => (
-						<Box key={i}>
-							<Text size="sm" fw={500}>Test {i + 1}</Text>
-							<Text size="sm">Input: <Code>{test.input}</Code></Text>
-							<Text size="sm">Expected: <Code>{test.expected}</Code></Text>
-						</Box>
-					))}
-				</Stack>
-      </InfoTab>
+			{tests.length > 0 && (
+				<InfoTab value="testcases">
+					<Stack gap="xs">
+						{tests.map((test, i) => (
+							<Box key={i}>
+								<Text size="sm" fw={500}>Test {i + 1}</Text>
+								<Text size="sm">Input: <Code>{test.input}</Code></Text>
+								<Text size="sm">Expected: <Code>{test.expected}</Code></Text>
+							</Box>
+						))}
+					</Stack>
+				</InfoTab>
+			)}
 		</Tabs>
 	);
 }

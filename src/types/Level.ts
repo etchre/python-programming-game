@@ -1,6 +1,11 @@
 import { Test } from './Test';
 import { BaseScene } from '../phaser/BaseScene';
 
+export interface PythonModule {
+  name: string;
+  code: string;
+}
+
 export interface Level {
   id: number;
   name: string;
@@ -10,4 +15,6 @@ export interface Level {
   starterCode: string;
   phaserScene?: typeof BaseScene;
   needsCodeUpdate?: boolean;
+  pythonModules?: PythonModule[];
+  levelData?: Record<string, any>;
 }

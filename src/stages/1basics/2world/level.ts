@@ -5,12 +5,6 @@ import type { BaseScene } from '../../../phaser/BaseScene';
 import type { Test } from '../../../types/Test';
 import * as data from './data';
 
-// these will automatically grab the starter code, tests & tasks,
-// the respective phaser scene, and any python modules for this level
-// starter code -> any .py file (excluding .module.py)
-// test & tasks -> any .goals.ts file
-// phaser scene -> any .scene.ts file
-// python modules -> any .module.py file
 const starterModules = import.meta.glob('./*.py', { eager: true, query: '?raw', import: 'default' });
 const sceneModules = import.meta.glob('./*.scene.ts', { eager: true, import: 'default' });
 const goalsModules = import.meta.glob('./*.goals.ts', { eager: true });
@@ -22,16 +16,12 @@ const starterCode = Object.entries(starterModules)
 const phaserScene = Object.values(sceneModules)[0] as typeof BaseScene | undefined;
 const goals = Object.values(goalsModules)[0] as { tests?: Test[]; tasks?: any[] } | undefined;
 
-// convert *.module.py files to PythonModule array
-// e.g. ./mouse.module.py -> { name: 'mouse', code: '...' }
 const pythonModules: PythonModule[] = Object.entries(pythonModuleFiles).map(([path, code]) => {
   const filename = path.split('/').pop()!;
   const name = filename.replace('.module.py', '');
   return { name, code: code as string };
 });
 
-// the id of the level is infered by the folder name
-// 1hello -> 1, therefore the id for this level is 1
 const parts = new URL(import.meta.url).pathname.split('/');
 const folderName = parts[parts.length - 2] ?? '';
 const id = parseInt(folderName, 10);
@@ -42,7 +32,7 @@ export const level: Level = {
   description: data.description,
   ...goals,
   starterCode,
-  ...(phaserScene && { phaserScene, needsCodeUpdate: true }),
+  ...(phaserScene && { phaserScene }),
   ...(pythonModules.length > 0 && { pythonModules }),
-  ...('levelData' in data && { levelData: (data as any).levelData }),
+  ...('levelData' in data && { levelData: data.levelData }),
 };

@@ -5,7 +5,7 @@ const pending = new Map<number, { resolve: (value: any) => void; reject: (reason
 let initPromise: Promise<void> | null = null;
 
 worker.onmessage = (e: MessageEvent) => {
-  const { id, type, result, error, stdout, lineTrace, stdoutCounts } = e.data;
+  const { id, type, result, error, stdout, lineTrace, stdoutCounts, events } = e.data;
   const handler = pending.get(id);
   if (!handler) return;
   pending.delete(id);
@@ -13,7 +13,7 @@ worker.onmessage = (e: MessageEvent) => {
   if (type === 'ready') {
     handler.resolve(undefined);
   } else if (type === 'result') {
-    handler.resolve({ result, stdout, lineTrace, stdoutCounts });
+    handler.resolve({ result, stdout, lineTrace, stdoutCounts, events });
   } else if (type === 'error') {
     handler.reject({ error, stdout });
   }
@@ -39,7 +39,13 @@ export async function runPython(code: string): Promise<{ result: string | null; 
   return send('run', { code });
 }
 
-export async function runPythonTraced(code: string): Promise<{ result: string | null; stdout: string[]; lineTrace: number[]; stdoutCounts: number[] }> {
+import type { PythonModule, GameEvent } from '../types';
+
+export async function runPythonTraced(
+  code: string,
+  modules?: PythonModule[],
+  levelData?: Record<string, any>,
+): Promise<{ result: string | null; stdout: string[]; lineTrace: number[]; stdoutCounts: number[]; events: GameEvent[] }> {
   await initPyodide();
-  return send('run', { code, trace: true });
+  return send('run', { code, trace: true, modules, levelData });
 }

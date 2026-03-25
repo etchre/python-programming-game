@@ -44,14 +44,16 @@ export function Game() {
 		setConsoleMessages([]);
 		const code = editorViewRef.current?.state.doc.toString() ?? '';
 
-		// Execute with tracing
-		const [{ stdout, lineTrace, stdoutCounts }] = await Promise.all([
-			runPythonTraced(code),
+		// Execute with tracing, passing level's Python modules and data
+		const modules = level?.pythonModules;
+		const levelData = level?.levelData;
+		const [{ stdout, lineTrace, stdoutCounts, events }] = await Promise.all([
+			runPythonTraced(code, modules, levelData),
 			new Promise(r => setTimeout(r, 500)),
 		]);
 		setIsRunning(false);
 
-		// Playback the line trace with synced console output
+		// Playback the line trace with synced console output and game events
 		const view = editorViewRef.current;
 		if (lineTrace?.length > 0 && view) {
 			setIsPlaying(true);
@@ -59,15 +61,37 @@ export function Game() {
 			const abort = new AbortController();
 			abortRef.current = abort;
 
+			// Get the active Phaser scene and notify it that playback is starting
+			const scene = level?.phaserScene
+				? gameRef.current?.scene.getScene(level.phaserScene.name) as BaseScene | undefined
+				: undefined;
+			scene?.onPlaybackStart(levelData);
+
+			// Pre-index events by step for O(1) lookup
+			const eventsByStep = new Map<number, typeof events>();
+			for (const evt of events ?? []) {
+				const list = eventsByStep.get(evt.step) ?? [];
+				list.push(evt);
+				eventsByStep.set(evt.step, list);
+			}
+
 			for (let i = 0; i < lineTrace.length; i++) {
 				if (abort.signal.aborted) break;
 				highlightLine(view, lineTrace[i]);
 				// Show stdout up to what the NEXT step sees (i.e. after this line executed)
 				const outputCount = stdoutCounts[i + 1] ?? stdout.length;
 				setConsoleOutput(stdout.slice(0, outputCount));
+				// Dispatch game events for this step
+				const stepEvents = eventsByStep.get(i);
+				if (stepEvents) {
+					for (const evt of stepEvents) {
+						scene?.onEvent(evt.action, evt.args);
+					}
+				}
 				await new Promise(r => setTimeout(r, parseInt(speedRef.current)));
 			}
 
+			scene?.onPlaybackEnd();
 			highlightLine(view, null);
 			if (abort.signal.aborted) {
 				setConsoleMessages(['-- aborted early --']);
