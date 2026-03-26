@@ -1,6 +1,7 @@
 import { Tabs, Text, Box, Stack, Code } from '@mantine/core';
 import { ComponentChildren } from 'preact';
 import { useRef, useEffect } from 'preact/hooks';
+import { useGameStore } from '../stores/gameStore';
 import { Test } from '../types';
 
 interface InfoTabProps {
@@ -11,17 +12,13 @@ interface InfoTabProps {
 interface InfoPanelProps {
 	description: string;
 	tests: Test[];
-	consoleOutput: string[];
-	consoleMessages: string[];
-	activeTab: string;
-	onTabChange: (tab: string) => void;
 }
 
 function InfoHeader({ hasTests }: { hasTests: boolean }) {
 	return (
 		<Tabs.List>
 			<Tabs.Tab value="description">Description</Tabs.Tab>
-      <Tabs.Tab value="console">Console</Tabs.Tab>
+			<Tabs.Tab value="console">Console</Tabs.Tab>
 			{hasTests && <Tabs.Tab value="testcases">Test cases</Tabs.Tab>}
 		</Tabs.List>
 	);
@@ -37,7 +34,9 @@ function InfoTab({ value, children }: InfoTabProps) {
 	);
 }
 
-function ConsolePanel({ consoleOutput, consoleMessages }: { consoleOutput: string[]; consoleMessages: string[] }) {
+function ConsolePanel() {
+	const consoleOutput = useGameStore((s) => s.consoleOutput);
+	const consoleMessages = useGameStore((s) => s.consoleMessages);
 	const endRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
@@ -67,16 +66,19 @@ function ConsolePanel({ consoleOutput, consoleMessages }: { consoleOutput: strin
 	);
 }
 
-export function InfoPanel({ description, tests, consoleOutput, consoleMessages, activeTab, onTabChange }: InfoPanelProps) {
+export function InfoPanel({ description, tests }: InfoPanelProps) {
+	const activeTab = useGameStore((s) => s.activeTab);
+	const setActiveTab = useGameStore((s) => s.setActiveTab);
+
 	return (
-		<Tabs value={activeTab} onChange={(v) => onTabChange(v ?? 'description')} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+		<Tabs value={activeTab} onChange={(v) => setActiveTab(v ?? 'description')} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 			<InfoHeader hasTests={tests.length > 0} />
 
 			<InfoTab value="description">
 				<Text>{description}</Text>
 			</InfoTab>
 
-			<ConsolePanel consoleOutput={consoleOutput} consoleMessages={consoleMessages} />
+			<ConsolePanel />
 
 			{tests.length > 0 && (
 				<InfoTab value="testcases">

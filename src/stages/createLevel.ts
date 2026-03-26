@@ -1,4 +1,4 @@
-import type { Level, PythonModule, Step } from '../types';
+import type { Level, PythonModule, Step, StepDraftMode } from '../types';
 import type { BaseScene } from '../phaser/BaseScene';
 import type { Test } from '../types/Test';
 
@@ -6,6 +6,7 @@ interface DataModule {
   name: string;
   description: string;
   levelData?: Record<string, any>;
+  stepDraftMode?: StepDraftMode;
   steps?: Record<number, { description: string; tests?: Test[]; tasks?: any[] }>;
 }
 
@@ -79,5 +80,6 @@ export function createLevel(data: DataModule, globs: GlobResults, importMetaUrl:
     ...(pythonModules.length > 0 && { pythonModules }),
     ...(data.levelData && { levelData: data.levelData }),
     ...(steps && { steps }),
+    stepDraftMode: data.stepDraftMode ?? 'independent',
   };
 }

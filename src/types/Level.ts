@@ -6,6 +6,8 @@ export interface PythonModule {
   code: string;
 }
 
+export type StepDraftMode = 'independent' | 'inherit';
+
 export interface Step {
   description: string;
   starterCode: string;
@@ -25,4 +27,5 @@ export interface Level {
   pythonModules?: PythonModule[];
   levelData?: Record<string, any>;
   steps?: Step[];
+  stepDraftMode?: StepDraftMode;
 }
