@@ -12,12 +12,11 @@ import {
 	type LevelProgress,
 	markLevelCompleted,
 	markStepCompleted,
-	resetAllProgress,
 	resetLevelProgress,
 	saveLevelCode,
 	saveStepCode,
 } from '../progress';
-import type { Level, Step } from '../types';
+import type { Level, Step, Test } from '../types';
 
 // ── pure helpers ──
 
@@ -35,8 +34,8 @@ function resolveDraftCode(level: Level, progress: LevelProgress | null, stepInde
 	return level.steps[stepIndex]?.starterCode ?? level.starterCode;
 }
 
-function checkTestsPassed(stdout: string[], tests: { expected: string }[]): boolean {
-	return tests.length === 0 || tests.every((t) => stdout.join('\n').trim() === t.expected.trim());
+function checkSingleTest(stdout: string[], test: Test): boolean {
+	return stdout.join('\n').trim() === test.expected.trim();
 }
 
 // ── hook ──
@@ -63,6 +62,13 @@ export function useGameActions() {
 
 	// keep speedRef in sync
 	speedRef.current = store.speed;
+
+	// init test results when tests change
+	useEffect(() => {
+		if (stepTests.length > 0) {
+			store.initTestResults(stepTests.length);
+		}
+	}, [stepTests.length, store.currentStep, currentStage, currentLevel]);
 
 	// ── progress loading ──
 
@@ -106,7 +112,7 @@ export function useGameActions() {
 		};
 	}, []);
 
-	// ── actions ──
+	// ── helpers ──
 
 	const clearPendingSave = () => {
 		if (saveTimeoutRef.current !== null) {
@@ -115,53 +121,42 @@ export function useGameActions() {
 		}
 	};
 
-	const handleRun = async () => {
-		if (!level) return;
+	const getCode = () => editorViewRef.current?.state.doc.toString() ?? '';
 
-		store.setIsRunning(true);
-		store.setActiveTab('console');
-		store.setConsoleMessages([]);
-		const code = editorViewRef.current?.state.doc.toString() ?? '';
-
+	const saveCode = async () => {
+		const code = getCode();
 		clearPendingSave();
 		if (steps) {
 			await saveStepCode(currentStage, currentLevel, store.currentStep, code);
 		} else {
 			await saveLevelCode(currentStage, currentLevel, code);
 		}
-
-		const modules = level.pythonModules;
-		const levelData = level.levelData;
-		const [{ stdout, lineTrace, stdoutCounts, events }] = await Promise.all([
-			runPythonTraced(code, modules, levelData),
-			new Promise((r) => setTimeout(r, 500)),
-		]);
-		store.setIsRunning(false);
-
-		const view = editorViewRef.current;
-		if (lineTrace?.length > 0 && view) {
-			await runPlayback(view, level, stdout, lineTrace, stdoutCounts, events, levelData);
-		} else {
-			store.setConsoleOutput(stdout);
-			await applyCompletion(stdout);
-		}
 	};
+
+	const executeCode = async (code: string) => {
+		const modules = level?.pythonModules;
+		const levelData = level?.levelData;
+		return runPythonTraced(code, modules, levelData);
+	};
+
+	// ── playback (used by handleTestOne) ──
 
 	const runPlayback = async (
 		view: EditorView,
-		level: Level,
 		stdout: string[],
 		lineTrace: number[],
 		stdoutCounts: number[],
 		events: { action: string; args: any[]; step: number }[] | undefined,
-		levelData: any,
+		testIndex: number,
 	) => {
 		store.setIsPlaying(true);
-		store.setConsoleOutput([]);
+		store.setTestLocked(true);
+		store.setTestResult(testIndex, { stdout: [] });
 		const abort = new AbortController();
 		abortRef.current = abort;
 
-		const scene = level.phaserScene
+		const levelData = level?.levelData;
+		const scene = level?.phaserScene
 			? (gameRef.current?.scene.getScene(level.phaserScene.name) as BaseScene | undefined)
 			: undefined;
 		scene?.onPlaybackStart(levelData);
@@ -178,7 +173,7 @@ export function useGameActions() {
 			if (abort.signal.aborted) break;
 			highlightLine(view, lineTrace[i]);
 			const outputCount = stdoutCounts[i + 1] ?? stdout.length;
-			store.setConsoleOutput(stdout.slice(0, outputCount));
+			store.setTestResult(testIndex, { stdout: stdout.slice(0, outputCount) });
 
 			const stepEvents = eventsByStep.get(i);
 			if (stepEvents) {
@@ -193,41 +188,148 @@ export function useGameActions() {
 		highlightLine(view, null);
 
 		if (abort.signal.aborted) {
-			store.setConsoleMessages(['-- aborted early --']);
+			store.setTestResult(testIndex, { messages: ['-- aborted early --'] });
 		} else {
-			store.setConsoleOutput(stdout);
-			await applyCompletion(stdout);
+			store.setTestResult(testIndex, { stdout });
 		}
 		store.setIsPlaying(false);
+		store.setTestLocked(false);
 		abortRef.current = null;
+
+		return !abort.signal.aborted;
 	};
 
-	const applyCompletion = async (stdout: string[]) => {
-		const passed = checkTestsPassed(stdout, stepTests);
+	// ── helpers ──
 
-		if (passed && steps) {
+	/** Check if all tests passed and there are no hidden tests — if so, trigger completion */
+	const checkAutoComplete = async () => {
+		const hasHidden = stepTests.some((t) => t.hidden);
+		if (hasHidden) return;
+
+		const results = useGameStore.getState().testResults;
+		const allPassed = results.length > 0 && results.every((r) => r.passed === true);
+		if (allPassed) {
+			await applyCompletion();
+		}
+	};
+
+	// ── actions ──
+
+	/** Run a single test case with playback */
+	const handleTestOne = async (testIndex: number) => {
+		if (!level || testIndex >= stepTests.length) return;
+
+		store.setIsRunning(true);
+		store.setActiveTab('console');
+		store.setSelectedTest(testIndex);
+		store.setTestResult(testIndex, { stdout: [], messages: [], error: null, passed: null });
+
+		const code = getCode();
+		await saveCode();
+
+		const { stdout, lineTrace, stdoutCounts, events, error } = await executeCode(code);
+		store.setIsRunning(false);
+
+		if (error) {
+			store.setTestResult(testIndex, { stdout, error, passed: false });
+			return;
+		}
+
+		const view = editorViewRef.current;
+		if (lineTrace?.length > 0 && view) {
+			const completed = await runPlayback(view, stdout, lineTrace, stdoutCounts, events, testIndex);
+			if (completed) {
+				const passed = checkSingleTest(stdout, stepTests[testIndex]);
+				store.setTestResult(testIndex, { passed });
+				await checkAutoComplete();
+			}
+		} else {
+			const passed = checkSingleTest(stdout, stepTests[testIndex]);
+			store.setTestResult(testIndex, { stdout, passed });
+			await checkAutoComplete();
+		}
+	};
+
+	/** Run all test cases instantly without playback */
+	const handleTestAll = async () => {
+		if (!level) return;
+
+		store.setIsRunning(true);
+		store.setActiveTab('console');
+
+		const code = getCode();
+		await saveCode();
+
+		for (let i = 0; i < stepTests.length; i++) {
+			if (stepTests[i].hidden) continue;
+			store.setTestResult(i, { stdout: [], messages: [], error: null, passed: null });
+
+			const { stdout, error } = await executeCode(code);
+
+			if (error) {
+				store.setTestResult(i, { stdout, error, passed: false });
+			} else {
+				const passed = checkSingleTest(stdout, stepTests[i]);
+				store.setTestResult(i, { stdout, passed });
+			}
+		}
+
+		store.setIsRunning(false);
+		await checkAutoComplete();
+	};
+
+	/** Run all tests (including hidden), complete level/step if all pass */
+	const handleVerify = async () => {
+		if (!level) return;
+
+		store.setIsRunning(true);
+		store.setActiveTab('console');
+
+		const code = getCode();
+		await saveCode();
+
+		let allPassed = true;
+
+		for (let i = 0; i < stepTests.length; i++) {
+			store.setTestResult(i, { stdout: [], messages: [], error: null, passed: null });
+
+			const { stdout, error } = await executeCode(code);
+
+			if (error) {
+				store.setTestResult(i, { stdout, error, passed: false });
+				allPassed = false;
+			} else {
+				const passed = checkSingleTest(stdout, stepTests[i]);
+				store.setTestResult(i, { stdout, passed });
+				if (!passed) allPassed = false;
+			}
+		}
+
+		store.setIsRunning(false);
+
+		if (allPassed) {
+			await applyCompletion();
+		}
+	};
+
+	const applyCompletion = async () => {
+		if (steps) {
 			const next = [...store.completedSteps];
 			next[store.currentStep] = true;
 			store.setCompletedSteps(next);
 			await markStepCompleted(currentStage, currentLevel, store.currentStep, true);
 
-			if (steps.every((_, i) => !!next[i])) {
+			const allDone = steps.every((_, i) => !!next[i]);
+			if (allDone) {
 				await markLevelCompleted(currentStage, currentLevel, true);
+				store.setShowWinScreen(true);
+			} else if (store.currentStep < steps.length - 1) {
+				// Step completed, next step unlocked — show via Next Step button
 			}
-
-			store.setConsoleMessages([
-				store.currentStep < steps.length - 1 ? '-- step completed! --' : '-- level completed! --',
-			]);
-			return;
-		}
-
-		if (passed) {
+		} else {
 			await markLevelCompleted(currentStage, currentLevel, true);
-			store.setConsoleMessages(['-- fully completed --']);
-			return;
+			store.setShowWinScreen(true);
 		}
-
-		store.setConsoleMessages(['-- tests did not pass --']);
 	};
 
 	const handleStop = () => {
@@ -274,14 +376,6 @@ export function useGameActions() {
 		await loadProgress(0);
 	};
 
-	const handleResetAll = async () => {
-		clearPendingSave();
-		await resetAllProgress();
-		store.setCurrentStep(0);
-		store.resetConsole();
-		await loadProgress(0);
-	};
-
 	return {
 		// data
 		level,
@@ -294,12 +388,13 @@ export function useGameActions() {
 		gameRef,
 
 		// actions
-		handleRun,
+		handleTestOne,
+		handleTestAll,
+		handleVerify,
 		handleStop,
 		handleNextStep,
 		goToStep,
 		handleCodeChange,
 		handleResetLevel,
-		handleResetAll,
 	};
 }

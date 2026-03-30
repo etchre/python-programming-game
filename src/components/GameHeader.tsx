@@ -5,13 +5,12 @@ import { Header } from './Header';
 interface GameHeaderProps {
 	title: string;
 	onBack: () => void;
-	onRun: () => void;
+	onVerify: () => void;
 	onStop: () => void;
 	onNextStep?: () => void;
 	onStepClick?: (step: number) => void;
 	totalSteps?: number;
 	onResetLevel: () => void;
-	onResetAll: () => void;
 }
 
 const speedOptions = [
@@ -67,8 +66,8 @@ function StepDots({ totalSteps, onStepClick }: { totalSteps: number; onStepClick
 }
 
 export function GameHeader({
-	title, onBack, onRun, onStop, onNextStep, onStepClick,
-	totalSteps, onResetLevel, onResetAll,
+	title, onBack, onVerify, onStop, onNextStep, onStepClick,
+	totalSteps, onResetLevel,
 }: GameHeaderProps) {
 	const isRunning = useGameStore((s) => s.isRunning);
 	const isPlaying = useGameStore((s) => s.isPlaying);
@@ -86,9 +85,6 @@ export function GameHeader({
 				<Button size="xs" variant="light" color="orange" onClick={onResetLevel}>
 					Reset Level
 				</Button>
-				<Button size="xs" variant="light" color="red" onClick={onResetAll}>
-					Reset All
-				</Button>
 				<SegmentedControl
 					size="xs"
 					data={speedOptions}
@@ -104,8 +100,8 @@ export function GameHeader({
 						Next Step
 					</Button>
 				) : (
-					<Button onClick={onRun} disabled={isRunning} loading={isRunning}>
-						Run
+					<Button color="teal" onClick={onVerify} disabled={isRunning} loading={isRunning}>
+						Verify
 					</Button>
 				)}
 			</Group>

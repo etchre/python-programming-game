@@ -1,5 +1,6 @@
 export interface Test {
+  name?: string;
   input: string;
   expected: string;
-  description?: string;
+  hidden?: boolean;
 }

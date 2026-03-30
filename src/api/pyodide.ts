@@ -15,7 +15,7 @@ worker.onmessage = (e: MessageEvent) => {
   } else if (type === 'result') {
     handler.resolve({ result, stdout, lineTrace, stdoutCounts, events });
   } else if (type === 'error') {
-    handler.reject({ error, stdout });
+    handler.resolve({ result: null, stdout: stdout ?? [], lineTrace: [], stdoutCounts: [], events: [], error });
   }
 };
 
@@ -45,7 +45,7 @@ export async function runPythonTraced(
   code: string,
   modules?: PythonModule[],
   levelData?: Record<string, any>,
-): Promise<{ result: string | null; stdout: string[]; lineTrace: number[]; stdoutCounts: number[]; events: GameEvent[] }> {
+): Promise<{ result: string | null; stdout: string[]; lineTrace: number[]; stdoutCounts: number[]; events: GameEvent[]; error?: string }> {
   await initPyodide();
   return send('run', { code, trace: true, modules, levelData });
 }

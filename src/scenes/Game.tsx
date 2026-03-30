@@ -10,6 +10,7 @@ import { RightSplit } from '../components/RightSplit';
 import { CodeEditor } from '../components/CodeEditor';
 import { InfoPanel } from '../components/InfoPanel';
 import { GameCanvas } from '../components/GameCanvas';
+import { WinScreen } from '../components/WinScreen';
 
 export function Game() {
 	const setScene = useSceneStore((s) => s.setScene);
@@ -19,6 +20,8 @@ export function Game() {
 	const completedSteps = useGameStore((s) => s.completedSteps);
 	const isProgressLoaded = useGameStore((s) => s.isProgressLoaded);
 	const initialEditorCode = useGameStore((s) => s.initialEditorCode);
+	const showWinScreen = useGameStore((s) => s.showWinScreen);
+	const setShowWinScreen = useGameStore((s) => s.setShowWinScreen);
 
 	const {
 		level,
@@ -27,13 +30,14 @@ export function Game() {
 		stepTests,
 		editorViewRef,
 		gameRef,
-		handleRun,
+		handleTestOne,
+		handleTestAll,
+		handleVerify,
 		handleStop,
 		handleNextStep,
 		goToStep,
 		handleCodeChange,
 		handleResetLevel,
-		handleResetAll,
 	} = useGameActions();
 
 	if (!level) {
@@ -48,17 +52,16 @@ export function Game() {
 	}
 
 	return (
-		<Stack h="100vh" gap={0}>
+		<Stack h="100vh" gap={0} style={{ position: 'relative' }}>
 			<GameHeader
 				title={level.name}
 				onBack={() => setScene('levelselect')}
-				onRun={handleRun}
+				onVerify={handleVerify}
 				onStop={handleStop}
 				onNextStep={steps && completedSteps[currentStep] && currentStep < steps.length - 1 ? handleNextStep : undefined}
 				onStepClick={steps ? goToStep : undefined}
 				totalSteps={steps?.length}
 				onResetLevel={handleResetLevel}
-				onResetAll={handleResetAll}
 			/>
 			<Flex style={{ flex: 1, minHeight: 0 }}>
 				<LeftSplit>
@@ -77,10 +80,22 @@ export function Game() {
 						<InfoPanel
 							description={stepDescription}
 							tests={stepTests}
+							onTestOne={handleTestOne}
+							onTestAll={handleTestAll}
 						/>
 					}
 				/>
 			</Flex>
+
+			{showWinScreen && (
+				<WinScreen
+					hasNextStep={!!steps && currentStep < steps.length - 1}
+					onStay={() => setShowWinScreen(false)}
+					onNextLevel={() => setScene('levelselect')}
+					onNextStep={() => { setShowWinScreen(false); handleNextStep(); }}
+					onLevelSelect={() => setScene('levelselect')}
+				/>
+			)}
 		</Stack>
 	);
 }
