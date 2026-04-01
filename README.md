@@ -1,4 +1,4 @@
-# Micromouse (programming web game)
+# Programming web game (working title)
 
 ## Dependencies
 - Preact
