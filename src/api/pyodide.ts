@@ -45,7 +45,8 @@ export async function runPythonTraced(
   code: string,
   modules?: PythonModule[],
   levelData?: Record<string, any>,
+  evaluate?: string,
 ): Promise<{ result: string | null; stdout: string[]; lineTrace: number[]; stdoutCounts: number[]; events: GameEvent[]; error?: string }> {
   await initPyodide();
-  return send('run', { code, trace: true, modules, levelData });
+  return send('run', { code, trace: true, modules, levelData, evaluate });
 }

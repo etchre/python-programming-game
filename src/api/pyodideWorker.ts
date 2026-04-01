@@ -72,7 +72,16 @@ sys.settrace(None)
         await pyodide.runPythonAsync(wrappedCode);
         const lineTrace = pyodide.globals.get('_trace_lines').toJs();
         const stdoutCounts = pyodide.globals.get('_stdout_counts').toJs();
-        self.postMessage({ id, type: 'result', result: null, stdout, lineTrace, stdoutCounts, events });
+
+        // Optionally evaluate an expression after code execution (for return/state tests)
+        let evalResult: string | null = null;
+        const { evaluate } = e.data;
+        if (evaluate) {
+          const val = await pyodide.runPythonAsync(evaluate);
+          evalResult = val?.toString() ?? null;
+        }
+
+        self.postMessage({ id, type: 'result', result: evalResult, stdout, lineTrace, stdoutCounts, events });
       } else {
         const result = await pyodide.runPythonAsync(code);
         self.postMessage({ id, type: 'result', result: result?.toString() ?? null, stdout });

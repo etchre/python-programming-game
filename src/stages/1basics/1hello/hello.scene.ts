@@ -7,8 +7,8 @@ export default class HelloScene extends TextMatchScene {
     super({ key: 'HelloScene' });
   }
 
-  onCreate() {
-    super.onCreate();
-    this.add.text(100, 100, 'extra!', { color: '#ffffff' });
-  }
+  // onCreate() {
+  //   super.onCreate();
+  //   this.add.text(100, 100, 'extra!', { color: '#ffffff' });
+  // }
 }

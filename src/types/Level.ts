@@ -13,6 +13,7 @@ export interface Step {
   starterCode: string;
   tests?: Test[];
   tasks?: any[];
+  testFn?: string;
 }
 
 export interface Level {
@@ -26,6 +27,7 @@ export interface Level {
   needsCodeUpdate?: boolean;
   pythonModules?: PythonModule[];
   levelData?: Record<string, any>;
+  testFn?: string;
   steps?: Step[];
   stepDraftMode?: StepDraftMode;
 }

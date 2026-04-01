@@ -34,8 +34,31 @@ function resolveDraftCode(level: Level, progress: LevelProgress | null, stepInde
 	return level.steps[stepIndex]?.starterCode ?? level.starterCode;
 }
 
-function checkSingleTest(stdout: string[], test: Test): boolean {
-	return stdout.join('\n').trim() === test.expected.trim();
+/** Build the evaluate expression for a test, or undefined for stdout tests */
+function buildEvaluateExpr(test: Test, testFn?: string): string | undefined {
+	switch (test.type) {
+		case 'stdout':
+			return undefined;
+		case 'return': {
+			if (!testFn) throw new Error('Return tests require a testFn on the level or step');
+			const argsStr = test.args.map((a) => JSON.stringify(a)).join(', ');
+			return `str(${testFn}(${argsStr}))`;
+		}
+		case 'state':
+			return `str(bool(${test.expression}))`;
+	}
+}
+
+/** Check if a test passed given execution results */
+function checkSingleTest(test: Test, stdout: string[], evalResult: string | null): boolean {
+	switch (test.type) {
+		case 'stdout':
+			return stdout.join('\n').trim() === test.expected.trim();
+		case 'return':
+			return evalResult?.trim() === test.expected.trim();
+		case 'state':
+			return evalResult === 'True';
+	}
 }
 
 // ── hook ──
@@ -59,6 +82,7 @@ export function useGameActions() {
 	const activeStep: Step | undefined = steps?.[store.currentStep];
 	const stepDescription = activeStep?.description ?? level?.description ?? '';
 	const stepTests = activeStep?.tests ?? level?.tests ?? [];
+	const testFn = activeStep?.testFn ?? level?.testFn;
 
 	// keep speedRef in sync
 	speedRef.current = store.speed;
@@ -133,10 +157,10 @@ export function useGameActions() {
 		}
 	};
 
-	const executeCode = async (code: string) => {
+	const executeCode = async (code: string, evaluate?: string) => {
 		const modules = level?.pythonModules;
 		const levelData = level?.levelData;
-		return runPythonTraced(code, modules, levelData);
+		return runPythonTraced(code, modules, levelData, evaluate);
 	};
 
 	// ── playback (used by handleTestOne) ──
@@ -219,6 +243,7 @@ export function useGameActions() {
 	const handleTestOne = async (testIndex: number) => {
 		if (!level || testIndex >= stepTests.length) return;
 
+		const test = stepTests[testIndex];
 		store.setIsRunning(true);
 		store.setActiveTab('console');
 		store.setSelectedTest(testIndex);
@@ -227,7 +252,8 @@ export function useGameActions() {
 		const code = getCode();
 		await saveCode();
 
-		const { stdout, lineTrace, stdoutCounts, events, error } = await executeCode(code);
+		const evaluate = buildEvaluateExpr(test, testFn);
+		const { result, stdout, lineTrace, stdoutCounts, events, error } = await executeCode(code, evaluate);
 		store.setIsRunning(false);
 
 		if (error) {
@@ -239,12 +265,12 @@ export function useGameActions() {
 		if (lineTrace?.length > 0 && view) {
 			const completed = await runPlayback(view, stdout, lineTrace, stdoutCounts, events, testIndex);
 			if (completed) {
-				const passed = checkSingleTest(stdout, stepTests[testIndex]);
+				const passed = checkSingleTest(test, stdout, result);
 				store.setTestResult(testIndex, { passed });
 				await checkAutoComplete();
 			}
 		} else {
-			const passed = checkSingleTest(stdout, stepTests[testIndex]);
+			const passed = checkSingleTest(test, stdout, result);
 			store.setTestResult(testIndex, { stdout, passed });
 			await checkAutoComplete();
 		}
@@ -261,15 +287,17 @@ export function useGameActions() {
 		await saveCode();
 
 		for (let i = 0; i < stepTests.length; i++) {
-			if (stepTests[i].hidden) continue;
+			const test = stepTests[i];
+			if (test.hidden) continue;
 			store.setTestResult(i, { stdout: [], messages: [], error: null, passed: null });
 
-			const { stdout, error } = await executeCode(code);
+			const evaluate = buildEvaluateExpr(test, testFn);
+			const { result, stdout, error } = await executeCode(code, evaluate);
 
 			if (error) {
 				store.setTestResult(i, { stdout, error, passed: false });
 			} else {
-				const passed = checkSingleTest(stdout, stepTests[i]);
+				const passed = checkSingleTest(test, stdout, result);
 				store.setTestResult(i, { stdout, passed });
 			}
 		}
@@ -291,15 +319,17 @@ export function useGameActions() {
 		let allPassed = true;
 
 		for (let i = 0; i < stepTests.length; i++) {
+			const test = stepTests[i];
 			store.setTestResult(i, { stdout: [], messages: [], error: null, passed: null });
 
-			const { stdout, error } = await executeCode(code);
+			const evaluate = buildEvaluateExpr(test, testFn);
+			const { result, stdout, error } = await executeCode(code, evaluate);
 
 			if (error) {
 				store.setTestResult(i, { stdout, error, passed: false });
 				allPassed = false;
 			} else {
-				const passed = checkSingleTest(stdout, stepTests[i]);
+				const passed = checkSingleTest(test, stdout, result);
 				store.setTestResult(i, { stdout, passed });
 				if (!passed) allPassed = false;
 			}

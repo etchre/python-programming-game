@@ -80,14 +80,26 @@ export function TestBar({ tests, onTestOne, onTestAll }: TestBarProps) {
 						<Text size="sm" fw={600} mb={4}>
 							{selectedTest + 1}. {test.name ?? `Test ${selectedTest + 1}`}
 						</Text>
-						{test.input && (
+						{test.type === 'stdout' && (
 							<Text size="xs" c="dimmed">
-								Input: <Code>{test.input}</Code>
+								Expected output: <Code>{test.expected}</Code>
 							</Text>
 						)}
-						<Text size="xs" c="dimmed">
-							Expected: <Code>{test.expected}</Code>
-						</Text>
+						{test.type === 'return' && (
+							<>
+								<Text size="xs" c="dimmed">
+									Args: <Code>{JSON.stringify(test.args)}</Code>
+								</Text>
+								<Text size="xs" c="dimmed">
+									Expected: <Code>{test.expected}</Code>
+								</Text>
+							</>
+						)}
+						{test.type === 'state' && (
+							<Text size="xs" c="dimmed">
+								{test.name ?? test.expression}
+							</Text>
+						)}
 						{result?.passed != null && (
 							<Text size="xs" c={result.passed ? 'green' : 'red'} mt={2}>
 								{result.passed ? 'Passed' : 'Failed'}
