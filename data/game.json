@@ -1,0 +1,15 @@
+{
+  "slug": "micromouse",
+  "title": "Micromouse",
+  "subject": "Technology",
+  "description": "Learn Python by writing code to guide a robot through maze puzzles and interactive coding challenges.",
+  "longDescription": [
+    "Micromouse is an educational coding game where students learn Python by solving interactive puzzles. Starting with simple print statements and progressing to maze navigation, players write real code that executes step-by-step with visual playback.",
+    "Each level introduces new programming concepts through hands-on challenges. A built-in code editor with line-by-line playback lets students see exactly how their code runs, making abstract concepts like loops, functions, and conditionals tangible and immediate.",
+    "Advanced levels feature a virtual robot navigating procedurally generated mazes. Students write Python modules that control the robot's movement and sensor readings, bridging the gap between writing code and seeing it interact with a simulated environment."
+  ],
+  "tags": ["python", "coding", "maze", "robotics", "algorithms"],
+  "embedHeight": "100vh",
+  "featured": true,
+  "devUrl": "http://localhost:5173"
+}
