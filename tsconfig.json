@@ -10,6 +10,7 @@
 		/* Preact Config */
 		"jsx": "react-jsx",
 		"jsxImportSource": "preact",
+		"resolveJsonModule": true,
 		"skipLibCheck": true,
 		"paths": {
 			"react": ["./node_modules/preact/compat/"],
