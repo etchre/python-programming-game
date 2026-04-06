@@ -7,14 +7,27 @@ interface ConsoleOutputProps {
 }
 
 export function ConsoleOutput({ result }: ConsoleOutputProps) {
-	const endRef = useRef<HTMLDivElement>(null);
+	const containerRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		endRef.current?.scrollIntoView({ behavior: 'instant' });
+		const container = containerRef.current;
+		if (!container || !result) return;
+
+		const hasOutput =
+			result.stdout.length > 0 ||
+			!!result.error ||
+			(result.messages?.length ?? 0) > 0;
+
+		if (!hasOutput) return;
+
+		container.scrollTop = container.scrollHeight;
 	}, [result?.stdout, result?.messages, result?.error]);
 
 	return (
-		<Box style={{ flex: 1, overflow: 'auto', backgroundColor: 'var(--mantine-color-dark-6)' }}>
+		<Box
+			ref={containerRef}
+			style={{ flex: 1, overflow: 'auto', backgroundColor: 'var(--mantine-color-dark-6)' }}
+		>
 			<Code block style={{ whiteSpace: 'pre-wrap', borderRadius: 0, backgroundColor: 'transparent' }}>
 				{result && result.stdout.length > 0
 					? result.stdout.join('\n')
@@ -36,7 +49,6 @@ export function ConsoleOutput({ result }: ConsoleOutputProps) {
 					))}
 				</Box>
 			)}
-			<div ref={endRef} />
 		</Box>
 	);
 }
