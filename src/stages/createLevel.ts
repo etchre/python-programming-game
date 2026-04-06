@@ -3,6 +3,7 @@ import type { BaseScene } from '../phaser/BaseScene';
 import type { Test } from '../types/Test';
 
 interface DataModule {
+  id: number;
   name: string;
   description: string;
   levelData?: Record<string, any>;
@@ -17,7 +18,7 @@ interface GlobResults {
   moduleFiles: Record<string, unknown>;
 }
 
-export function createLevel(data: DataModule, globs: GlobResults, importMetaUrl: string): Level {
+export function createLevel(data: DataModule, globs: GlobResults): Level {
   const { pyFiles, sceneFiles, goalsFiles, moduleFiles } = globs;
 
   // separate step files, module files, and regular starter code
@@ -48,11 +49,6 @@ export function createLevel(data: DataModule, globs: GlobResults, importMetaUrl:
     return { name, code: code as string };
   });
 
-  // extract id from folder name
-  const parts = new URL(importMetaUrl).pathname.split('/');
-  const folderName = parts[parts.length - 2] ?? '';
-  const id = parseInt(folderName, 10);
-
   // build steps if step files and data.steps both exist
   let steps: Step[] | undefined;
   if (data.steps && stepEntries.length > 0) {
@@ -71,7 +67,7 @@ export function createLevel(data: DataModule, globs: GlobResults, importMetaUrl:
   }
 
   return {
-    id,
+    id: data.id,
     name: data.name,
     description: data.description,
     ...goals,

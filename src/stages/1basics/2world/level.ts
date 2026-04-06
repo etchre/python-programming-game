@@ -8,4 +8,4 @@ export const level = createLevel(data, {
   sceneFiles: import.meta.glob('./*.scene.ts', { eager: true, import: 'default' }),
   goalsFiles: import.meta.glob('./*.goals.ts', { eager: true }),
   moduleFiles: import.meta.glob('./*.module.py', { eager: true, query: '?raw', import: 'default' }),
-}, import.meta.url);
+});

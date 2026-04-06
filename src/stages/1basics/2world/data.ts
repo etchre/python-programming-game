@@ -1,3 +1,4 @@
+export const id = 2;
 export const name = 'World!';
 export const description = 'Use the circle module to change colors!';
 export const levelData = {
