@@ -7,8 +7,9 @@ interface DataModule {
   name: string;
   description: string;
   levelData?: Record<string, any>;
+  testFn?: string;
   stepDraftMode?: StepDraftMode;
-  steps?: Record<number, { description: string; tests?: Test[]; tasks?: any[] }>;
+  steps?: Record<number, { description: string; tests?: Test[]; tasks?: any[]; testFn?: string }>;
 }
 
 interface GlobResults {
@@ -60,6 +61,7 @@ export function createLevel(data: DataModule, globs: GlobResults): Level {
         // step-specific tests/tasks override level-wide goals
         tests: stepData?.tests ?? goals?.tests,
         tasks: stepData?.tasks ?? goals?.tasks,
+        ...(stepData?.testFn && { testFn: stepData.testFn }),
       };
     });
     // default starterCode to step 1
@@ -72,6 +74,7 @@ export function createLevel(data: DataModule, globs: GlobResults): Level {
     description: data.description,
     ...goals,
     starterCode,
+    ...(data.testFn && { testFn: data.testFn }),
     ...(phaserScene && { phaserScene, needsCodeUpdate: !steps }),
     ...(pythonModules.length > 0 && { pythonModules }),
     ...(data.levelData && { levelData: data.levelData }),
