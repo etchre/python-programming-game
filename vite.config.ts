@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import preact from '@preact/preset-vite';
 import gameData from './data/game.json';
@@ -6,4 +7,8 @@ import gameData from './data/game.json';
 export default defineConfig({
 	plugins: [preact()],
 	base: `/staticGames/${gameData['game-id']}/`,
+	test: {
+		include: ['src/**/*.test.ts'],
+		setupFiles: ['src/test/setup.ts'],
+	},
 });
