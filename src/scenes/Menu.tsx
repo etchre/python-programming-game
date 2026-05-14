@@ -9,7 +9,7 @@ export function Menu() {
     <Center h='100vh'>
       <Stack>
         <Title order={1} size='3rem'>
-          micromouse
+          python programming game
         </Title>
         <Button size='lg' onClick={() => setScene('stages')}>
           start

@@ -10,6 +10,14 @@ interface DataModule {
   testFn?: string;
   stepDraftMode?: StepDraftMode;
   steps?: Record<number, { description: string; tests?: Test[]; tasks?: any[]; testFn?: string }>;
+  // Explicit scene class — preferred over a *.scene.ts file in the level dir.
+  // Lets multiple levels share a single reusable scene (e.g. MazeScene).
+  scene?: typeof BaseScene;
+  // Python modules sourced from outside the level dir (e.g. src/phaser/maze/).
+  // Merged with any local *.module.py files.
+  sharedModules?: PythonModule[];
+  // Level-wide tests inline in data.ts. Falls back to a *.goals.ts file.
+  tests?: Test[];
 }
 
 interface GlobResults {
@@ -39,16 +47,21 @@ export function createLevel(data: DataModule, globs: GlobResults): Level {
 
   stepEntries.sort((a, b) => a.num - b.num);
 
-  // phaser scene and goals
-  const phaserScene = Object.values(sceneFiles)[0] as typeof BaseScene | undefined;
-  const goals = Object.values(goalsFiles)[0] as { tests?: Test[]; tasks?: any[] } | undefined;
+  // phaser scene — explicit data.scene wins, else fall back to globbed file
+  const phaserScene = data.scene ?? (Object.values(sceneFiles)[0] as typeof BaseScene | undefined);
 
-  // python modules
-  const pythonModules: PythonModule[] = Object.entries(moduleFiles).map(([path, code]) => {
+  // tests — explicit data.tests wins, else fall back to globbed goals file
+  const goals = Object.values(goalsFiles)[0] as { tests?: Test[]; tasks?: any[] } | undefined;
+  const levelTests = data.tests ?? goals?.tests;
+  const levelTasks = goals?.tasks;
+
+  // python modules — local *.module.py files plus any shared modules
+  const localModules: PythonModule[] = Object.entries(moduleFiles).map(([path, code]) => {
     const filename = path.split('/').pop()!;
     const name = filename.replace('.module.py', '');
     return { name, code: code as string };
   });
+  const pythonModules: PythonModule[] = [...(data.sharedModules ?? []), ...localModules];
 
   // build steps if step files and data.steps both exist
   let steps: Step[] | undefined;
@@ -59,8 +72,8 @@ export function createLevel(data: DataModule, globs: GlobResults): Level {
         description: stepData?.description ?? data.description,
         starterCode: code,
         // step-specific tests/tasks override level-wide goals
-        tests: stepData?.tests ?? goals?.tests,
-        tasks: stepData?.tasks ?? goals?.tasks,
+        tests: stepData?.tests ?? levelTests,
+        tasks: stepData?.tasks ?? levelTasks,
         ...(stepData?.testFn && { testFn: stepData.testFn }),
       };
     });
@@ -72,7 +85,8 @@ export function createLevel(data: DataModule, globs: GlobResults): Level {
     id: data.id,
     name: data.name,
     description: data.description,
-    ...goals,
+    ...(levelTests && { tests: levelTests }),
+    ...(levelTasks && { tasks: levelTasks }),
     starterCode,
     ...(data.testFn && { testFn: data.testFn }),
     ...(phaserScene && { phaserScene, needsCodeUpdate: !steps }),

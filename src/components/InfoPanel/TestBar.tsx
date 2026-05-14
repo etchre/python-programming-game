@@ -7,9 +7,10 @@ interface TestBarProps {
 	tests: Test[];
 	onTestOne: (index: number) => void;
 	onTestAll: () => void;
+	onReset: () => void;
 }
 
-export function TestBar({ tests, onTestOne, onTestAll }: TestBarProps) {
+export function TestBar({ tests, onTestOne, onTestAll, onReset }: TestBarProps) {
 	const testResults = useGameStore((s) => s.testResults);
 	const selectedTest = useGameStore((s) => s.selectedTest);
 	const setSelectedTest = useGameStore((s) => s.setSelectedTest);
@@ -39,6 +40,14 @@ export function TestBar({ tests, onTestOne, onTestAll }: TestBarProps) {
 					))}
 				</Group>
 				<Group gap={6}>
+					<Button
+						size="compact-xs"
+						variant="default"
+						disabled={testLocked}
+						onClick={onReset}
+					>
+						Reset
+					</Button>
 					<Button
 						size="compact-xs"
 						variant="light"

@@ -10,9 +10,10 @@ interface InfoPanelProps {
 	tests: Test[];
 	onTestOne: (index: number) => void;
 	onTestAll: () => void;
+	onReset: () => void;
 }
 
-export function InfoPanel({ description, tests, onTestOne, onTestAll }: InfoPanelProps) {
+export function InfoPanel({ description, tests, onTestOne, onTestAll, onReset }: InfoPanelProps) {
 	const [descExpanded, setDescExpanded] = useState(true);
 	const selectedTest = useGameStore((s) => s.selectedTest);
 	const testResults = useGameStore((s) => s.testResults);
@@ -48,7 +49,7 @@ export function InfoPanel({ description, tests, onTestOne, onTestAll }: InfoPane
 
 			{/* Console section — fills remaining space */}
 			<Box style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-				<TestBar tests={tests} onTestOne={onTestOne} onTestAll={onTestAll} />
+				<TestBar tests={tests} onTestOne={onTestOne} onTestAll={onTestAll} onReset={onReset} />
 				<ConsoleOutput result={testResults[selectedTest]} />
 			</Box>
 		</Box>

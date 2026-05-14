@@ -94,6 +94,14 @@ export function useGameActions() {
 		};
 	}, []);
 
+	// preview the selected test's maze (or level levelData) on the canvas.
+	// fires on level/step/test changes; skipped while an animation is running so
+	// the end-of-playback state stays visible.
+	useEffect(() => {
+		if (store.isPlaying) return;
+		return applySceneDataForTest(store.selectedTest);
+	}, [level, store.currentStep, store.selectedTest]);
+
 	// ── helpers ──
 
 	const clearPendingSave = () => {
@@ -115,10 +123,44 @@ export function useGameActions() {
 		}
 	};
 
-	const executeCode = async (code: string, evaluate?: string) => {
+	const executeCode = async (code: string, evaluate?: string, testLevelData?: Record<string, any>) => {
 		const modules = level?.pythonModules;
-		const levelData = level?.levelData;
+		const levelData = testLevelData ?? level?.levelData;
 		return runPythonTraced(code, modules, levelData, evaluate);
+	};
+
+	/** Push current test's levelData into the scene as a preview/reset.
+	 *  Polls via rAF until the Phaser game + scene are ready, then fires
+	 *  scene.onPlaybackStart. Survives refs-aren't-reactive timing issues. */
+	const applySceneDataForTest = (testIndex: number): (() => void) | undefined => {
+		if (!level?.phaserScene) return;
+		const data = stepTests[testIndex]?.levelData ?? level.levelData;
+		if (!data) return;
+
+		let rafId: number | null = null;
+		let cancelled = false;
+		let attempts = 0;
+		const MAX_ATTEMPTS = 300; // ~5s @ 60fps; bail if scene never boots
+
+		const tick = () => {
+			if (cancelled) return;
+			attempts++;
+			const game = gameRef.current;
+			const scene = game?.scene.getScene(level.phaserScene!.name) as BaseScene | undefined;
+			// 5 === Phaser.Scenes.RUNNING — scene's create() has completed
+			if (scene && scene.sys.settings.status >= 5) {
+				scene.onPlaybackStart(data);
+				return;
+			}
+			if (attempts >= MAX_ATTEMPTS) return;
+			rafId = requestAnimationFrame(tick);
+		};
+		tick();
+
+		return () => {
+			cancelled = true;
+			if (rafId !== null) cancelAnimationFrame(rafId);
+		};
 	};
 
 	// ── playback (used by handleTestOne) ──
@@ -130,6 +172,7 @@ export function useGameActions() {
 		stdoutCounts: number[],
 		events: { action: string; args: any[]; step: number }[] | undefined,
 		testIndex: number,
+		testLevelData?: Record<string, any>,
 	) => {
 		store.setIsPlaying(true);
 		store.setTestLocked(true);
@@ -137,7 +180,7 @@ export function useGameActions() {
 		const abort = new AbortController();
 		abortRef.current = abort;
 
-		const levelData = level?.levelData;
+		const levelData = testLevelData ?? level?.levelData;
 		const scene = level?.phaserScene
 			? (gameRef.current?.scene.getScene(level.phaserScene.name) as BaseScene | undefined)
 			: undefined;
@@ -211,7 +254,7 @@ export function useGameActions() {
 		await saveCode();
 
 		const evaluate = buildEvaluateExpr(test, testFn);
-		const { result, stdout, lineTrace, stdoutCounts, events, error } = await executeCode(code, evaluate);
+		const { result, stdout, lineTrace, stdoutCounts, events, error } = await executeCode(code, evaluate, test.levelData);
 		store.setIsRunning(false);
 
 		if (error) {
@@ -221,7 +264,7 @@ export function useGameActions() {
 
 		const view = editorViewRef.current;
 		if (lineTrace?.length > 0 && view) {
-			const completed = await runPlayback(view, stdout, lineTrace, stdoutCounts, events, testIndex);
+			const completed = await runPlayback(view, stdout, lineTrace, stdoutCounts, events, testIndex, test.levelData);
 			if (completed) {
 				const passed = checkSingleTest(test, stdout, result);
 				store.setTestResult(testIndex, { passed });
@@ -250,7 +293,7 @@ export function useGameActions() {
 			store.setTestResult(i, { stdout: [], messages: [], error: null, passed: null });
 
 			const evaluate = buildEvaluateExpr(test, testFn);
-			const { result, stdout, error } = await executeCode(code, evaluate);
+			const { result, stdout, error } = await executeCode(code, evaluate, test.levelData);
 
 			if (error) {
 				store.setTestResult(i, { stdout, error, passed: false });
@@ -281,7 +324,7 @@ export function useGameActions() {
 			store.setTestResult(i, { stdout: [], messages: [], error: null, passed: null });
 
 			const evaluate = buildEvaluateExpr(test, testFn);
-			const { result, stdout, error } = await executeCode(code, evaluate);
+			const { result, stdout, error } = await executeCode(code, evaluate, test.levelData);
 
 			if (error) {
 				store.setTestResult(i, { stdout, error, passed: false });
@@ -322,6 +365,16 @@ export function useGameActions() {
 
 	const handleStop = () => {
 		abortRef.current?.abort();
+	};
+
+	/** Reset the selected test: clear its result, restore the canvas to the
+	 *  test's starting state, and drop the editor line highlight. */
+	const handleReset = () => {
+		if (store.isPlaying) return;
+		store.setTestResult(store.selectedTest, { stdout: [], messages: [], error: null, passed: null });
+		applySceneDataForTest(store.selectedTest);
+		const view = editorViewRef.current;
+		if (view) highlightLine(view, null);
 	};
 
 	const handleNextStep = () => {
@@ -380,6 +433,7 @@ export function useGameActions() {
 		handleTestAll,
 		handleVerify,
 		handleStop,
+		handleReset,
 		handleNextStep,
 		goToStep,
 		handleCodeChange,
