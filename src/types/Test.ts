@@ -1,6 +1,9 @@
 interface BaseTest {
   name?: string;
   hidden?: boolean;
+  // Overrides level.levelData for this test only. Lets one level run user code
+  // against multiple scenarios (e.g. different mazes for the same goal).
+  levelData?: Record<string, any>;
 }
 
 export interface StdoutTest extends BaseTest {

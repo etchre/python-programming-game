@@ -115,9 +115,9 @@ export function useGameActions() {
 		}
 	};
 
-	const executeCode = async (code: string, evaluate?: string) => {
+	const executeCode = async (code: string, evaluate?: string, testLevelData?: Record<string, any>) => {
 		const modules = level?.pythonModules;
-		const levelData = level?.levelData;
+		const levelData = testLevelData ?? level?.levelData;
 		return runPythonTraced(code, modules, levelData, evaluate);
 	};
 
@@ -130,6 +130,7 @@ export function useGameActions() {
 		stdoutCounts: number[],
 		events: { action: string; args: any[]; step: number }[] | undefined,
 		testIndex: number,
+		testLevelData?: Record<string, any>,
 	) => {
 		store.setIsPlaying(true);
 		store.setTestLocked(true);
@@ -137,7 +138,7 @@ export function useGameActions() {
 		const abort = new AbortController();
 		abortRef.current = abort;
 
-		const levelData = level?.levelData;
+		const levelData = testLevelData ?? level?.levelData;
 		const scene = level?.phaserScene
 			? (gameRef.current?.scene.getScene(level.phaserScene.name) as BaseScene | undefined)
 			: undefined;
@@ -211,7 +212,7 @@ export function useGameActions() {
 		await saveCode();
 
 		const evaluate = buildEvaluateExpr(test, testFn);
-		const { result, stdout, lineTrace, stdoutCounts, events, error } = await executeCode(code, evaluate);
+		const { result, stdout, lineTrace, stdoutCounts, events, error } = await executeCode(code, evaluate, test.levelData);
 		store.setIsRunning(false);
 
 		if (error) {
@@ -221,7 +222,7 @@ export function useGameActions() {
 
 		const view = editorViewRef.current;
 		if (lineTrace?.length > 0 && view) {
-			const completed = await runPlayback(view, stdout, lineTrace, stdoutCounts, events, testIndex);
+			const completed = await runPlayback(view, stdout, lineTrace, stdoutCounts, events, testIndex, test.levelData);
 			if (completed) {
 				const passed = checkSingleTest(test, stdout, result);
 				store.setTestResult(testIndex, { passed });
@@ -250,7 +251,7 @@ export function useGameActions() {
 			store.setTestResult(i, { stdout: [], messages: [], error: null, passed: null });
 
 			const evaluate = buildEvaluateExpr(test, testFn);
-			const { result, stdout, error } = await executeCode(code, evaluate);
+			const { result, stdout, error } = await executeCode(code, evaluate, test.levelData);
 
 			if (error) {
 				store.setTestResult(i, { stdout, error, passed: false });
@@ -281,7 +282,7 @@ export function useGameActions() {
 			store.setTestResult(i, { stdout: [], messages: [], error: null, passed: null });
 
 			const evaluate = buildEvaluateExpr(test, testFn);
-			const { result, stdout, error } = await executeCode(code, evaluate);
+			const { result, stdout, error } = await executeCode(code, evaluate, test.levelData);
 
 			if (error) {
 				store.setTestResult(i, { stdout, error, passed: false });
