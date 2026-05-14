@@ -94,6 +94,14 @@ export function useGameActions() {
 		};
 	}, []);
 
+	// preview the selected test's maze (or level levelData) on the canvas.
+	// fires on level/step/test changes; skipped while an animation is running so
+	// the end-of-playback state stays visible.
+	useEffect(() => {
+		if (store.isPlaying) return;
+		return applySceneDataForTest(store.selectedTest);
+	}, [level, store.currentStep, store.selectedTest]);
+
 	// ── helpers ──
 
 	const clearPendingSave = () => {
@@ -119,6 +127,40 @@ export function useGameActions() {
 		const modules = level?.pythonModules;
 		const levelData = testLevelData ?? level?.levelData;
 		return runPythonTraced(code, modules, levelData, evaluate);
+	};
+
+	/** Push current test's levelData into the scene as a preview/reset.
+	 *  Polls via rAF until the Phaser game + scene are ready, then fires
+	 *  scene.onPlaybackStart. Survives refs-aren't-reactive timing issues. */
+	const applySceneDataForTest = (testIndex: number): (() => void) | undefined => {
+		if (!level?.phaserScene) return;
+		const data = stepTests[testIndex]?.levelData ?? level.levelData;
+		if (!data) return;
+
+		let rafId: number | null = null;
+		let cancelled = false;
+		let attempts = 0;
+		const MAX_ATTEMPTS = 300; // ~5s @ 60fps; bail if scene never boots
+
+		const tick = () => {
+			if (cancelled) return;
+			attempts++;
+			const game = gameRef.current;
+			const scene = game?.scene.getScene(level.phaserScene!.name) as BaseScene | undefined;
+			// 5 === Phaser.Scenes.RUNNING — scene's create() has completed
+			if (scene && scene.sys.settings.status >= 5) {
+				scene.onPlaybackStart(data);
+				return;
+			}
+			if (attempts >= MAX_ATTEMPTS) return;
+			rafId = requestAnimationFrame(tick);
+		};
+		tick();
+
+		return () => {
+			cancelled = true;
+			if (rafId !== null) cancelAnimationFrame(rafId);
+		};
 	};
 
 	// ── playback (used by handleTestOne) ──
@@ -325,6 +367,16 @@ export function useGameActions() {
 		abortRef.current?.abort();
 	};
 
+	/** Reset the selected test: clear its result, restore the canvas to the
+	 *  test's starting state, and drop the editor line highlight. */
+	const handleReset = () => {
+		if (store.isPlaying) return;
+		store.setTestResult(store.selectedTest, { stdout: [], messages: [], error: null, passed: null });
+		applySceneDataForTest(store.selectedTest);
+		const view = editorViewRef.current;
+		if (view) highlightLine(view, null);
+	};
+
 	const handleNextStep = () => {
 		if (steps && store.currentStep < steps.length - 1) {
 			goToStep(store.currentStep + 1);
@@ -381,6 +433,7 @@ export function useGameActions() {
 		handleTestAll,
 		handleVerify,
 		handleStop,
+		handleReset,
 		handleNextStep,
 		goToStep,
 		handleCodeChange,

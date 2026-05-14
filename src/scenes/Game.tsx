@@ -34,6 +34,7 @@ export function Game() {
 		handleTestAll,
 		handleVerify,
 		handleStop,
+		handleReset,
 		handleNextStep,
 		goToStep,
 		handleCodeChange,
@@ -82,6 +83,7 @@ export function Game() {
 							tests={stepTests}
 							onTestOne={handleTestOne}
 							onTestAll={handleTestAll}
+							onReset={handleReset}
 						/>
 					}
 				/>

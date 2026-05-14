@@ -66,9 +66,11 @@ export class MazeScene extends BaseScene {
   }
 
   private rebuild() {
-    this.tweens.killTweensOf(this.robot!);
+    if (this.robot) this.tweens.killTweensOf(this.robot);
     this.gridGraphics?.destroy();
     this.robot?.destroy();
+    this.gridGraphics = undefined;
+    this.robot = undefined;
 
     const { width, height } = this.scale;
     const padding = 16;
