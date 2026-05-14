@@ -9,11 +9,15 @@ self.onmessage = async (e: MessageEvent) => {
   const { id, type, code } = e.data;
 
   if (type === 'init') {
-    pyodide = await loadPyodide({
-      stdout: (text: string) => stdout.push(text),
-      stderr: (text: string) => stdout.push(text),
-    });
-    self.postMessage({ id, type: 'ready' });
+    try {
+      pyodide = await loadPyodide({
+        stdout: (text: string) => stdout.push(text),
+        stderr: (text: string) => stdout.push(text),
+      });
+      self.postMessage({ id, type: 'ready' });
+    } catch (err: any) {
+      self.postMessage({ id, type: 'error', error: err.message, stdout });
+    }
   }
 
   if (type === 'run') {

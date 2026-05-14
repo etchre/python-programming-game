@@ -19,6 +19,22 @@ worker.onmessage = (e: MessageEvent) => {
   }
 };
 
+function rejectPending(error: Error) {
+  for (const handler of pending.values()) {
+    handler.reject(error);
+  }
+  pending.clear();
+  initPromise = null;
+}
+
+worker.onerror = (event: ErrorEvent) => {
+  rejectPending(new Error(event.message || 'Pyodide worker failed to load'));
+};
+
+worker.onmessageerror = () => {
+  rejectPending(new Error('Pyodide worker returned an unreadable message'));
+};
+
 function send(type: string, data: any = {}): Promise<any> {
   const id = idCounter++;
   return new Promise((resolve, reject) => {
@@ -29,14 +45,25 @@ function send(type: string, data: any = {}): Promise<any> {
 
 export async function initPyodide(): Promise<void> {
   if (!initPromise) {
-    initPromise = send('init');
+    initPromise = send('init').then((response) => {
+      if (response?.error) {
+        throw new Error(response.error);
+      }
+    }).catch((err) => {
+      initPromise = null;
+      throw err;
+    });
   }
   return initPromise;
 }
 
 export async function runPython(code: string): Promise<{ result: string | null; stdout: string[] }> {
-  await initPyodide();
-  return send('run', { code });
+  try {
+    await initPyodide();
+    return send('run', { code });
+  } catch (err: any) {
+    return { result: null, stdout: [], error: err?.message ?? String(err) } as any;
+  }
 }
 
 import type { PythonModule, GameEvent } from '../types';
@@ -47,6 +74,17 @@ export async function runPythonTraced(
   levelData?: Record<string, any>,
   evaluate?: string,
 ): Promise<{ result: string | null; stdout: string[]; lineTrace: number[]; stdoutCounts: number[]; events: GameEvent[]; error?: string }> {
-  await initPyodide();
-  return send('run', { code, trace: true, modules, levelData, evaluate });
+  try {
+    await initPyodide();
+    return send('run', { code, trace: true, modules, levelData, evaluate });
+  } catch (err: any) {
+    return {
+      result: null,
+      stdout: [],
+      lineTrace: [],
+      stdoutCounts: [],
+      events: [],
+      error: err?.message ?? String(err),
+    };
+  }
 }
