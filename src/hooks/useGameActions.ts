@@ -148,7 +148,7 @@ export function useGameActions() {
 			const game = gameRef.current;
 			const scene = game?.scene.getScene(level.phaserScene!.name) as BaseScene | undefined;
 			// 5 === Phaser.Scenes.RUNNING — scene's create() has completed
-			if (scene && scene.sys.settings.status >= 5) {
+			if (scene && scene.sys.settings.status >= 5 && scene.scale.width > 0 && scene.scale.height > 0) {
 				scene.onPlaybackStart(data);
 				return;
 			}

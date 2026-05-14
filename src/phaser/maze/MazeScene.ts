@@ -66,13 +66,15 @@ export class MazeScene extends BaseScene {
   }
 
   private rebuild() {
+    const { width, height } = this.scale;
+    if (this.rows <= 0 || this.cols <= 0 || width <= 0 || height <= 0) return;
+
     if (this.robot) this.tweens.killTweensOf(this.robot);
     this.gridGraphics?.destroy();
     this.robot?.destroy();
     this.gridGraphics = undefined;
     this.robot = undefined;
 
-    const { width, height } = this.scale;
     const padding = 16;
     const availW = width - padding * 2;
     const availH = height - padding * 2;
