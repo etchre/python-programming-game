@@ -129,6 +129,12 @@ export function useGameActions() {
 		return runPythonTraced(code, modules, levelData, evaluate);
 	};
 
+	const getLevelScene = (): BaseScene | undefined => {
+		if (!level?.phaserScene || !gameRef.current) return undefined;
+		const sceneClass = level.phaserScene;
+		return gameRef.current.scene.getScenes().find((scene) => scene instanceof sceneClass) as BaseScene | undefined;
+	};
+
 	/** Push current test's levelData into the scene as a preview/reset.
 	 *  Polls via rAF until the Phaser game + scene are ready, then fires
 	 *  scene.onPlaybackStart. Survives refs-aren't-reactive timing issues. */
@@ -145,8 +151,7 @@ export function useGameActions() {
 		const tick = () => {
 			if (cancelled) return;
 			attempts++;
-			const game = gameRef.current;
-			const scene = game?.scene.getScene(level.phaserScene!.name) as BaseScene | undefined;
+			const scene = getLevelScene();
 			// 5 === Phaser.Scenes.RUNNING — scene's create() has completed
 			if (scene && scene.sys.settings.status >= 5 && scene.scale.width > 0 && scene.scale.height > 0) {
 				scene.onPlaybackStart(data);
@@ -181,9 +186,7 @@ export function useGameActions() {
 		abortRef.current = abort;
 
 		const levelData = testLevelData ?? level?.levelData;
-		const scene = level?.phaserScene
-			? (gameRef.current?.scene.getScene(level.phaserScene.name) as BaseScene | undefined)
-			: undefined;
+		const scene = getLevelScene();
 		scene?.onPlaybackStart(levelData);
 
 		// pre-index events by step
@@ -403,7 +406,7 @@ export function useGameActions() {
 		}, 250);
 
 		if (level.needsCodeUpdate && level.phaserScene) {
-			const scene = gameRef.current?.scene.getScene(level.phaserScene.name) as BaseScene | undefined;
+			const scene = getLevelScene();
 			scene?.updateCode(code);
 		}
 	};
