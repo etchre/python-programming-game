@@ -6,6 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+coverage
 
 node_modules
 dist
@@ -22,4 +23,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.code-workspace
 Python_Game_Curriculum_Guide.md
